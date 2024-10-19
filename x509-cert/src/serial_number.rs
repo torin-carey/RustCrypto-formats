@@ -149,7 +149,7 @@ impl<P: Profile> FixedTag for SerialNumber<P> {
     const TAG: Tag = <Int as FixedTag>::TAG;
 }
 
-impl Display for SerialNumber {
+impl<P: Profile> Display for SerialNumber<P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut iter = self.as_bytes().iter().peekable();
 
@@ -166,8 +166,8 @@ impl Display for SerialNumber {
 
 macro_rules! impl_from {
     ($source:ty) => {
-        impl From<$source> for SerialNumber {
-            fn from(inner: $source) -> SerialNumber {
+        impl<P: Profile> From<$source> for SerialNumber<P> {
+            fn from(inner: $source) -> SerialNumber<P> {
                 let serial_number = &inner.to_be_bytes()[..];
                 let serial_number = asn1::Uint::new(serial_number).unwrap();
 
@@ -228,20 +228,21 @@ mod tests {
     #[test]
     fn serial_number_display() {
         {
-            let sn = SerialNumber::new(&[0x11, 0x22, 0x33]).unwrap();
+            let sn = SerialNumber::<Rfc5280>::new(&[0x11, 0x22, 0x33]).unwrap();
 
             assert_eq!(sn.to_string(), "11:22:33")
         }
 
         {
-            let sn = SerialNumber::new(&[0xAA, 0xBB, 0xCC, 0x01, 0x10, 0x00, 0x11]).unwrap();
+            let sn =
+                SerialNumber::<Rfc5280>::new(&[0xAA, 0xBB, 0xCC, 0x01, 0x10, 0x00, 0x11]).unwrap();
 
             // We force the user's serial to be positive if they give us a negative one.
             assert_eq!(sn.to_string(), "00:AA:BB:CC:01:10:00:11")
         }
 
         {
-            let sn = SerialNumber::new(&[0x00, 0x00, 0x01]).unwrap();
+            let sn = SerialNumber::<Rfc5280>::new(&[0x00, 0x00, 0x01]).unwrap();
 
             // Leading zeroes are ignored, due to canonicalization.
             assert_eq!(sn.to_string(), "01")
